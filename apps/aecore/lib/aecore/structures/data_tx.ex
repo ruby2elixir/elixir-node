@@ -4,7 +4,7 @@ defmodule Aecore.Structures.DataTx do
   """
 
   alias Aecore.Structures.DataTx
-  alias Aecore.Chain.ChainState
+  alias Aecore.Structures.Chainstate
   alias Aecore.Structures.SpendTx
   alias Aeutil.Serialization
   alias Aeutil.Parser
@@ -68,39 +68,47 @@ defmodule Aecore.Structures.DataTx do
   Changes the chainstate (account state and tx_type_state) according
   to the given transaction requirements
   """
-  @spec process_chainstate!(DataTx.t(), ChainState.chainstate()) :: ChainState.chainstate()
-  def process_chainstate!(%DataTx{} = tx, chainstate) do
-    accounts_state = chainstate.accounts
-    tx_type_state = Map.get(chainstate, tx.type, %{})
+  @spec process_chainstate!(DataTx.t(), Chainstate.chainstate(), non_neg_integer()) ::
+          Chainstate.chainstate()
+  def process_chainstate!(%DataTx{} = tx, chainstate, block_height) do
+    accounts_state_tree = chainstate.accounts
 
-    if !nonce_valid?(accounts_state, tx) do
+    tx_type_state =
+      if tx.type == SpendTx do
+        %{}
+      else
+        Map.get(chainstate, tx.type.get_chain_state_name(), %{})
+      end
+
+    if !nonce_valid?(accounts_state_tree, tx) do
       throw({:error, "Nonce is too small"})
     end
 
-    {new_accounts_state, new_tx_type_state} =
+    {new_accounts_state_tree, new_tx_type_state} =
       tx.payload
       |> tx.type.init()
       |> tx.type.process_chainstate!(
         tx.sender,
         tx.fee,
         tx.nonce,
-        accounts_state,
+        block_height,
+        accounts_state_tree,
         tx_type_state
       )
 
     new_chainstate =
-      if Map.has_key?(chainstate, tx.type) do
-        Map.put(chainstate, tx.type, new_tx_type_state)
-      else
+      if tx.type == SpendTx do
         chainstate
+      else
+        Map.put(chainstate, tx.type.get_chain_state_name(), new_tx_type_state)
       end
 
-    Map.put(new_chainstate, :accounts, new_accounts_state)
+    Map.put(new_chainstate, :accounts, new_accounts_state_tree)
   end
 
+  @spec nonce_valid?(ChainState.accounts(), DataTx.t()) :: boolean()
   def nonce_valid?(accounts_state, tx) do
-    account_state = Map.get(accounts_state, tx.sender, Account.empty())
-    tx.nonce > account_state.nonce
+    tx.nonce > Account.nonce(accounts_state, tx.sender)
   end
 
   @spec serialize(DataTx.t()) :: map()
@@ -115,7 +123,6 @@ defmodule Aecore.Structures.DataTx do
   @spec deserialize(payload()) :: DataTx.t()
   def deserialize(%{} = tx) do
     data_tx = Serialization.deserialize_value(tx)
-
     init(data_tx.type, data_tx.payload, data_tx.sender, data_tx.fee, data_tx.nonce)
   end
 end
