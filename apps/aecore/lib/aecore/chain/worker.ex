@@ -68,6 +68,12 @@ defmodule Aecore.Chain.Worker do
      }, 0}
   end
 
+  @spec get_accounts_tree() :: AccountStateTree.t()
+  def get_accounts_tree, do: GenServer.call(__MODULE__, {:get_state_tree, :accounts})
+
+  @spec get_oracles_tree() :: Oracle.t()
+  def get_oracles_tree, do: GenServer.call(__MODULE__, {:get_state_tree, :oracles})
+
   def clear_state, do: GenServer.call(__MODULE__, :clear_state)
 
   @spec top_block() :: Block.t()
@@ -438,6 +444,22 @@ defmodule Aecore.Chain.Worker do
 
   def handle_call(:blocks_data_map, _from, %{blocks_data_map: blocks_data_map} = state) do
     {:reply, blocks_data_map, state}
+  end
+
+  def handle_call(
+        {:get_state_tree, :accounts},
+        _from,
+        %{blocks_data_map: blocks_data_map, top_hash: top_hash} = state
+      ) do
+    {:reply, blocks_data_map[top_hash].chain_state.accounts, state}
+  end
+
+  def handle_call(
+        {:get_state_tree, :oracles},
+        _from,
+        %{blocks_data_map: blocks_data_map, top_hash: top_hash} = state
+      ) do
+    {:reply, blocks_data_map[top_hash].chain_state.oracles, state}
   end
 
   def handle_info(:timeout, state) do

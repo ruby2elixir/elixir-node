@@ -2,7 +2,7 @@ defmodule Aecore.Oracle.Oracle do
   @moduledoc """
   Contains wrapping functions for working with oracles, data validation and TTL calculations.
   """
-
+  alias Aecore.Oracle.OracleStateTree
   alias Aecore.Oracle.Tx.OracleRegistrationTx
   alias Aecore.Oracle.Tx.OracleQueryTx
   alias Aecore.Oracle.Tx.OracleResponseTx
@@ -302,4 +302,29 @@ defmodule Aecore.Oracle.Oracle do
         ttl > 0
     end
   end
+
+  @doc """
+  Gets the value for a specific key in a tree.
+  Where the key is :registered_oracles
+  and value is a map of all registered oracles
+  """
+  def get_registered_oracles_state do
+    # TODO -> Convert the returned structure to a typed structure
+    OracleStateTree.get(tree, encoded_registered_oracles)
+  end
+
+  @doc """
+  Gets the value for a specific key in a tree.
+  Where the key is :interaction_objects
+  and value is a map of all interaction objects
+  """
+  def get_interaction_objects_state do
+    tree = Chain.get_oracles_tree()
+    # TODO -> Convert the returned structure to a typed structure
+    OracleStateTree.get(tree, encoded_interaction_objects)
+  end
+
+  def encoded_registered_oracles, do: Msgpax.pack!(:registered_oracles, iodata: false)
+
+  def encoded_interaction_objects, do: Msgpax.pack!(:interaction_objects, iodata: false)
 end

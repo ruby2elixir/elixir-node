@@ -8,6 +8,7 @@ defmodule Aecore.Chain.Chainstate do
   alias Aecore.Tx.DataTx
   alias Aecore.Account.Account
   alias Aecore.Account.AccountStateTree
+  alias Aecore.Oracle.OracleStateTree
   alias Aecore.Chain.Chainstate
   alias Aeutil.Bits
   alias Aecore.Oracle.Oracle
@@ -17,7 +18,7 @@ defmodule Aecore.Chain.Chainstate do
 
   @type t :: %Chainstate{
           accounts: AccountStateTree.accounts_state(),
-          oracles: Oracle.oracles()
+          oracles: OracleStateTree.oracles_state()
         }
 
   defstruct [
@@ -29,7 +30,7 @@ defmodule Aecore.Chain.Chainstate do
   def init do
     %Chainstate{
       :accounts => AccountStateTree.init_empty(),
-      :oracles => %{registered_oracles: %{}, interaction_objects: %{}}
+      :oracles => OracleStateTree.init_empty()
     }
   end
 

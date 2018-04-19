@@ -310,4 +310,19 @@ defmodule Aeutil.Serialization do
   defp serialize_txs_info_to_json([], acc) do
     Enum.reverse(acc)
   end
+
+  def nils_to_binary(tx) when is_map(tx) do
+    tx = remove_struct(tx)
+
+    Enum.reduce(tx, %{}, fn {k, v}, acc ->
+      Map.put(
+        acc,
+        k,
+        case v do
+          %{} = v -> nils_to_binary(v)
+          _ -> v
+        end
+      )
+    end)
+  end
 end
